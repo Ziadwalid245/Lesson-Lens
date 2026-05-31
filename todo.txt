@@ -1,0 +1,6 @@
+[] make a windows version that uses the windows API to capture loopback
+[]make git repo with readme
+[]record a demo
+[]fix the model so that it summarizes and transcribes
+[]add a template for the notes lands vs props etc
+[]add a GUI
