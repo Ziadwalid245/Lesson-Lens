@@ -10,7 +10,7 @@ def listen(
     audio_device,
     sample_rate,
     silence_timeout_sec=2.5,
-    max_turn_sec=60,
+    max_turn_sec=1000,
     speech_threshold=0.5,
 ):
 

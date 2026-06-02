@@ -29,7 +29,6 @@ def find_device(audio_device=AUDIODEVICE):
 
 
 def transcribe(audio, sample_rate, model):
-    print("Transcribing.....")
     if sample_rate != 16000:
         g = gcd(sample_rate, 16000)
         audio = resample_poly(audio, 16000 // g, sample_rate // g).astype(np.float32)
@@ -45,7 +44,7 @@ def ask_ai(text):
     response = requests.post(
         OLLAMA_URL,
         json={
-            "model": "test",
+            "model": "leadtaker",
             "stream": False,
             "messages": [{"role": "user", "content": text}],
         },
