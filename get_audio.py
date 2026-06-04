@@ -9,19 +9,15 @@ def listen(
     vad_model,
     audio_device,
     sample_rate,
-    silence_timeout_sec=2.5,
-    max_turn_sec=1000,
-    speech_threshold=0.5,
 ):
 
     frame_samples = 512
-    frame_druation_sec = frame_samples / sample_rate
-    needed_silence_frames = int(silence_timeout_sec / frame_druation_sec)
-    max_frames = int(max_turn_sec / frame_druation_sec)
+    frame_duration_sec = frame_samples / sample_rate
+    needed_silence_frames = int(2.5 / frame_duration_sec)
 
-    captured = []
+    captured_segment = []
     silent_streak = 0
-    started_speaking = False
+    is_talking = False
 
     print("Listening...")
     with sd.InputStream(
@@ -31,27 +27,23 @@ def listen(
         device=audio_device,
         blocksize=frame_samples,
     ) as stream:
-        for _ in range(max_frames):
-            frame, _ = stream.read(frame_samples)
-            tensor = torch.from_numpy(frame.flatten())
-            speech_prob = vad_model(tensor, sample_rate).item()
-            is_speech = speech_prob > speech_threshold
-
-            if is_speech:
-                if not started_speaking:
-                    print("Heard you, recording...")
-                    started_speaking = True
-                captured.append(frame)
-                silent_streak = 0
-            elif started_speaking:
-                captured.append(frame)
-                silent_streak += 1
-                if silent_streak >= needed_silence_frames:
-                    print("Got it.")
-                    break
-
-    if not captured:
-        return np.array([], dtype=np.float32), sample_rate
-
-    audio = np.concatenate(captured).astype(np.float32)
-    return audio, sample_rate
+        try:
+            while True:
+                frame, _ = stream.read(frame_samples)
+                tensor = torch.from_numpy(frame.flatten())
+                is_speech = vad_model(tensor, sample_rate).item() > 0.5
+                if is_speech:
+                    captured_segment.append(frame.flatten())
+                    silent_streak = 0
+                    is_talking = True
+                elif is_talking:
+                    captured_segment.append(frame.flatten())
+                    silent_streak += 1
+                    if silent_streak >= needed_silence_frames:
+                        audio = np.concatenate(captured_segment)
+                        yield audio, sample_rate
+                        captured_segment = []
+                        silent_streak = 0
+                        is_talking = False
+        except KeyboardInterrupt:
+            print("Call ended.")

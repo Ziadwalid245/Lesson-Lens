@@ -29,6 +29,7 @@ def find_device(audio_device=AUDIODEVICE):
 
 
 def transcribe(audio, sample_rate, model):
+    print("Transcribing.....")
     if sample_rate != 16000:
         g = gcd(sample_rate, 16000)
         audio = resample_poly(audio, 16000 // g, sample_rate // g).astype(np.float32)
@@ -58,20 +59,18 @@ def main():
     print(f"Loading Whisper model '{WHISPERMODEL}'...")
     model = WhisperModel(WHISPERMODEL, device="cpu", compute_type="int8")
     vad_model = load_silero_vad()
-
-    sample_rate, idx = find_device()
+    full_transcript = []
     print("Ready! \n")
-    while True:
-        audio, sample_rate = listen(
-            vad_model, audio_device="default", sample_rate=16000
-        )
-        if len(audio) == 0:
-            print("Nothing was heard. Listening again \n")
-            continue
-        text = transcribe(audio=audio, sample_rate=sample_rate, model=model)
-        print(f" heard{text} ")
-        reply = ask_ai(text)
-        print(f"reply {reply}")
+    try:
+        for audio, sr in listen(vad_model, audio_device="default", sample_rate=16000):
+            text = transcribe(audio, sr, model)
+            print(f" heard{text} ")
+            full_transcript.append(text)
+    except KeyboardInterrupt:
+        print("call ended")
+    whole_call = " ".join(full_transcript)
+    print("\n--- Lead info ---")
+    print(ask_ai(whole_call))
 
 
 if __name__ == "__main__":
