@@ -17,3 +17,12 @@ env/
 # OS
 Thumbs.db
 desktop.ini
+
+build/
+dist/
+build_env/
+.venv/
+__pycache__/
+transcripts/
+student_feedback.docx
+!requirements.txt
