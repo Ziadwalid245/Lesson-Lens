@@ -25,4 +25,5 @@ build_env/
 __pycache__/
 transcripts/
 student_feedback.docx
+Teacher_feedback_Modelfile
 !requirements.txt
