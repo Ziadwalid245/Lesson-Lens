@@ -16,4 +16,5 @@ Unzip the folder and run `LessonFeedbackTool.exe`. No Python needed.
 
 You'll also need [Ollama](https://ollama.com) installed and running.
 
+[Watch the demo ](https://github.com/Ziadwalid245/Lesson-Lens/releases/download/v1.0.0/LessonLensDemo.mp4)
 
