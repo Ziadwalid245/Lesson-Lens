@@ -28,7 +28,7 @@ def main(argv=None):
 
     db.mark_interrupted()
     log.info("Settings: %s | Data: %s", paths.SETTINGS_FILE, paths.DATA_DIR)
-    from .gui import run
+    from .ui import run
     run()
 
 

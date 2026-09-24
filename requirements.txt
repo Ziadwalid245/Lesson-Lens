@@ -13,6 +13,7 @@ python-docx==1.2.0
 pydantic==2.13.5
 requests==2.34.2
 platformdirs==4.11.12
+PySide6-Essentials==6.11.2
 
 # build tool
 pyinstaller==6.22.3

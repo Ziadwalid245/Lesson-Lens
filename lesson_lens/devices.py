@@ -44,3 +44,17 @@ def get_default_output_name():
         return find_loopback_device()["name"]
     except RuntimeError:
         return None
+
+
+def friendly_name(device_name):
+    """'Headphones (soundcore Space One) [Loopback]' -> 'Headphones (soundcore Space One)'."""
+    return device_name.removesuffix(" [Loopback]")
+
+
+def choose(remembered, devices, default):
+    """The device used last time if it's still plugged in, else the Windows default, else the first one."""
+    if remembered in devices:
+        return remembered
+    if default in devices:
+        return default
+    return next(iter(devices), None)

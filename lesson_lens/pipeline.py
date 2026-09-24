@@ -1,38 +1,60 @@
 """The lesson pipeline: record both sides -> transcribe -> AI feedback -> Word doc.
 
-Talks to the GUI only through status_queue, using (kind, text) tuples:
-  "info"    progress message          "line"  a new transcript line
-  "warning" something the teacher should know, lesson keeps going
-  "error"   the run failed               "done"  text = path of the lesson folder
+Talks to the window only through status_queue, using (kind, value) tuples:
+  "started"  path of the new lesson folder   "line"   a new transcript line
+  "level"    (speaker, loudness 0-1)          "info"   progress message
+  "warning"  something the teacher should know; the lesson keeps going
+  "error"    the run failed                   "done"   path of the lesson folder
 """
 import logging
 import queue
+import re
 import threading
 import time
 from datetime import datetime
 
-from faster_whisper import WhisperModel
+import numpy as np
 from silero_vad import load_silero_vad
 
 from . import db, paths, settings
 from .capture_loopback import loopback_frames
 from .capture_mic import mic_frames
-from .create_feedback import create_feedback_doc
+from .create_feedback import save_feedback
 from .llm import OllamaError, ensure_model, generate_feedback
 from .recording import WavRecorder
-from .regenerate import regenerate_command
 from .vad import phrases
 
 log = logging.getLogger(__name__)
 
 SENTINEL = object()
-FOLDER_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 
 def fmt_time(seconds):
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes:02d}:{secs:02d}"
+
+
+def lesson_folder(root, started, student_name):
+    """A new folder like '2026-09-24 15-30 Omar' that doesn't exist yet."""
+    safe_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", student_name).strip().rstrip(".")
+    base = started.strftime("%Y-%m-%d %H-%M") + (f" {safe_name}" if safe_name else "")
+    folder, n = root / base, 2
+    while folder.exists():
+        folder, n = root / f"{base} ({n})", n + 1
+    return folder
+
+
+def loudness(frame):
+    return float(np.sqrt(np.mean(frame * frame)))
+
+
+def metered(speaker, frames, status):
+    """Pass frames through, reporting how loud they are ~10 times a second for the level meters."""
+    for i, (frame, arrived_at) in enumerate(frames):
+        if i % 3 == 0:
+            status.put(("level", (speaker, loudness(frame))))
+        yield frame, arrived_at
 
 
 def transcribe(audio, model, cfg):
@@ -70,7 +92,7 @@ def transcriber(model, cfg, audio_queue, lines, live_file, t0, status):
                 status.put(("line", line))
     except Exception as e:
         log.exception("The transcriber stopped")
-        status.put(("warning", f"Live transcription stopped: {e}\n\nThe audio is still being recorded."))
+        status.put(("warning", f"Live transcription stopped: {e}. The audio is still being recorded."))
         # Keep draining so the capture threads never block on a full queue.
         while audio_queue.get() is not SENTINEL:
             pass
@@ -86,31 +108,30 @@ def loopback_producer(frames, vad_model, cfg, audio_queue, status):
         producer("student", frames, vad_model, cfg, audio_queue)
     except Exception as e:
         log.exception("Student capture stopped")
-        status.put(("warning", f"Student audio stopped recording: {e}\n\nOnly your side will be transcribed."))
+        status.put(("warning", f"Your student's audio stopped recording ({e}). Only your side is being transcribed."))
 
 
-def run_lesson(stop_flag, status, input_device, loopback_device, student_name=""):
+def run_lesson(stop_flag, status, whisper_model, input_device, loopback_device, student_name=""):
+    """Record one lesson until stop_flag is set, then write its feedback. whisper_model is loaded by the caller."""
     cfg = settings.get()
     lesson_dir = lesson_id = None
     try:
-        # Check everything BEFORE the lesson, not after 60 minutes of teaching.
-        status.put(("info", "Checking Ollama..."))
+        # Check the AI BEFORE the lesson, not after 60 minutes of teaching.
+        status.put(("info", "Checking the AI helper..."))
         ensure_model(lambda msg: status.put(("info", msg)))
-
-        status.put(("info", f"Loading Whisper '{cfg.whisper_model}' (first run downloads it)..."))
-        model = WhisperModel(cfg.whisper_model, device="cpu", compute_type="int8")
         mic_vad, loop_vad = load_silero_vad(), load_silero_vad()
 
         started = datetime.now()
-        lesson_dir = cfg.lessons_path / started.strftime(FOLDER_FORMAT)
-        lesson_dir.mkdir(parents=True, exist_ok=True)
+        lesson_dir = lesson_folder(cfg.lessons_path, started, student_name)
+        lesson_dir.mkdir(parents=True)
         lesson_id = db.start_lesson(lesson_dir, started, student_name)
         log.info("Lesson %d started in %s (audio saved: %s)", lesson_id, lesson_dir, cfg.save_audio)
+        status.put(("started", str(lesson_dir)))
 
         audio_queue, lines, recorders = queue.Queue(), [], []
         t0 = time.monotonic()
-        teacher_frames = mic_frames(input_device, stop_flag)
-        student_frames = loopback_frames(loopback_device, stop_flag)
+        teacher_frames = metered("teacher", mic_frames(input_device, stop_flag), status)
+        student_frames = metered("student", loopback_frames(loopback_device, stop_flag), status)
         if cfg.save_audio:
             recorders = [WavRecorder(lesson_dir / "teacher.wav", t0), WavRecorder(lesson_dir / "student.wav", t0)]
             teacher_frames = recorders[0].tee(teacher_frames)
@@ -118,7 +139,7 @@ def run_lesson(stop_flag, status, input_device, loopback_device, student_name=""
 
         consumer = threading.Thread(
             target=transcriber, name="transcriber",
-            args=(model, cfg, audio_queue, lines, lesson_dir / "transcript_live.txt", t0, status),
+            args=(whisper_model, cfg, audio_queue, lines, lesson_dir / "transcript_live.txt", t0, status),
         )
         consumer.start()
         loopback_thread = threading.Thread(
@@ -127,26 +148,27 @@ def run_lesson(stop_flag, status, input_device, loopback_device, student_name=""
             daemon=True,  # a loopback read can block while the PC is silent
         )
         loopback_thread.start()
-        status.put(("info", "Recording. Teach as normal, then press Stop."))
+        status.put(("info", "Recording"))
 
         try:
             producer("teacher", teacher_frames, mic_vad, cfg, audio_queue)
         except Exception as e:
             log.exception("Teacher capture stopped")
-            status.put(("warning", f"Microphone stopped recording: {e}"))
+            status.put(("warning", f"Your microphone stopped recording ({e})."))
         finally:
             stop_flag.set()
             duration = time.monotonic() - t0
             loopback_thread.join(timeout=5)
             for recorder in recorders:
                 recorder.close()
-            status.put(("info", "Finishing the transcript (can take a minute)..."))
+            status.put(("info", "Finishing the transcript..."))
             audio_queue.put(SENTINEL)
             consumer.join()
         log.info("Recording stopped after %.0f s, %d lines transcribed", duration, len(lines))
 
         if not lines:
-            message = "Nothing was transcribed. Check that the right microphone and speakers are selected."
+            message = ("Nothing was transcribed, so there's no feedback to write.\n\n"
+                       "Next time, press \"Check sound\" before the lesson to make sure both bars move.")
             db.set_status(lesson_id, "failed", message, duration_seconds=duration)
             status.put(("error", message))
             return
@@ -154,12 +176,12 @@ def run_lesson(stop_flag, status, input_device, loopback_device, student_name=""
         # Lines arrive in the order they finished transcribing; sort by when they were spoken.
         lines.sort(key=lambda line: line[0])
         transcript = "\n".join(f"[{fmt_time(t)}] {spk}: {txt}" for t, spk, txt in lines)
-        transcript_path = lesson_dir / "transcript.txt"
-        transcript_path.write_text(transcript, encoding="utf-8")
+        (lesson_dir / "transcript.txt").write_text(transcript, encoding="utf-8")
         db.set_status(lesson_id, "transcribed", duration_seconds=duration)
 
-        feedback = generate_feedback(transcript, lambda msg: status.put(("info", msg)))
-        create_feedback_doc(feedback, lesson_dir / "feedback.docx", started.date())
+        status.put(("info", "Writing feedback..."))
+        feedback = generate_feedback(transcript, lambda msg: None)
+        save_feedback(feedback, lesson_dir, started.date())
         db.set_status(lesson_id, "done")
         log.info("Lesson %d done", lesson_id)
         status.put(("done", str(lesson_dir)))
@@ -170,8 +192,7 @@ def run_lesson(stop_flag, status, input_device, loopback_device, student_name=""
             status.put(("error", str(e)))
             return
         db.set_status(lesson_id, "failed", str(e))
-        status.put(("error", f"{e}\n\nThe transcript is saved in:\n{lesson_dir}\n\n"
-                             f"Once fixed, run:\n{regenerate_command(lesson_dir / 'transcript.txt')}"))
+        status.put(("error", f"{e}\n\nThe lesson is saved. Press \"Try again\" once the problem is fixed."))
     except Exception as e:
         log.exception("Lesson failed")
         if lesson_id is not None:

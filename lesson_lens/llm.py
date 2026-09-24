@@ -2,6 +2,11 @@
 import json
 import logging
 import math
+import os
+import shutil
+import subprocess
+import time
+from pathlib import Path
 
 import requests
 from pydantic import ValidationError
@@ -15,6 +20,13 @@ log = logging.getLogger(__name__)
 
 class OllamaError(RuntimeError):
     """A problem with Ollama, worded so it can be shown to the user as-is."""
+
+
+class OllamaNotRunning(OllamaError):
+    pass
+
+
+DOWNLOAD_PAGE = "https://ollama.com/download"
 
 
 def _url(path):
@@ -35,19 +47,57 @@ def check_ollama():
         log.info("Ollama %s is running", version)
         return version
     except requests.RequestException as e:
-        raise OllamaError(
+        raise OllamaNotRunning(
             "Ollama isn't running.\n\nOpen the Ollama app (or run 'ollama serve') and try again."
         ) from e
 
 
-def ensure_model(on_progress=print):
-    """Make sure Ollama is up and the model is downloaded. Pulls it if missing."""
-    check_ollama()
-    model = settings.get().llm_model
+def ollama_app_path():
+    """Where the Ollama desktop app is installed, or None if it isn't."""
+    app = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama app.exe"
+    if app.exists():
+        return app
+    cli = shutil.which("ollama")
+    return Path(cli) if cli else None
+
+
+def start_ollama(wait_seconds=30):
+    """Launch the installed Ollama app and wait until it answers. Raises OllamaNotRunning if it doesn't."""
+    app = ollama_app_path()
+    if app is None:
+        raise OllamaNotRunning("Ollama isn't installed.")
+    log.info("Starting %s", app)
+    args = [str(app)] if app.name == "ollama app.exe" else [str(app), "serve"]
+    subprocess.Popen(
+        args,
+        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW,
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    deadline = time.monotonic() + wait_seconds
+    while True:
+        try:
+            return check_ollama()
+        except OllamaNotRunning:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(1)
+
+
+def installed_models():
+    """Names of the models Ollama already has, e.g. ["gemma4:e4b", "llama3.1:latest"]."""
     r = requests.get(_url("/api/tags"), timeout=10)
     r.raise_for_status()
-    installed = {m["name"] for m in r.json().get("models", [])}
-    if _full_name(model) in installed:
+    return sorted(m["name"] for m in r.json().get("models", []))
+
+
+def ensure_model(on_progress=print, on_percent=None):
+    """Make sure Ollama is up and the model is downloaded. Pulls it if missing.
+
+    on_percent, if given, gets the download progress as a number from 0 to 100.
+    """
+    check_ollama()
+    model = settings.get().llm_model
+    if _full_name(model) in installed_models():
         return
 
     log.info("Model %s is missing, pulling it", model)
@@ -67,6 +117,8 @@ def ensure_model(on_progress=print):
                     pct = int(done * 100 / total)
                     if pct != last_pct:
                         on_progress(f"Downloading '{model}': {pct}%")
+                        if on_percent:
+                            on_percent(pct)
                         last_pct = pct
     except requests.RequestException as e:
         raise OllamaError(f"Download of '{model}' failed: {e}") from e

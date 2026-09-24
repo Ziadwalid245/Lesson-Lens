@@ -102,9 +102,22 @@ def set_status(lesson_id, status, error=None, duration_seconds=None):
         )
 
 
+def recent_lessons(limit=100):
+    """Newest lessons first, each with its student's name (or None)."""
+    with closing(connect()) as con:
+        return con.execute(
+            "SELECT lessons.*, students.name AS student_name FROM lessons "
+            "LEFT JOIN students ON students.id = lessons.student_id "
+            "ORDER BY started_at DESC, lessons.id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+
 def lesson_for_folder(folder):
     """The lesson row saved in this folder, or None if it isn't in the database."""
     with closing(connect()) as con:
         return con.execute(
-            "SELECT * FROM lessons WHERE folder = ?", (str(Path(folder).resolve()),)
+            "SELECT lessons.*, students.name AS student_name FROM lessons "
+            "LEFT JOIN students ON students.id = lessons.student_id WHERE folder = ?",
+            (str(Path(folder).resolve()),),
         ).fetchone()

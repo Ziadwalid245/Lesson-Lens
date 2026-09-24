@@ -26,7 +26,9 @@ class Settings:
 
     # --- Local AI (Ollama) -------------------------------------------------------
     ollama_url: str = "http://localhost:11434"
-    llm_model: str = "llama3.1"     # any model from ollama.com/library, e.g. "gemma4:e4b"
+    # Any model from ollama.com/library. gemma4:e4b (9.6 GB) caught every learner error in our
+    # test transcript; llama3.1 (4.9 GB) is ~2.5x faster but missed errors and praised one.
+    llm_model: str = "gemma4:e4b"
     llm_temperature: float = 0.3    # lower = more consistent feedback
     min_context: int = 8192         # tokens; Ollama's own default is only 4096 on most PCs
     max_context: int = 32768        # raise only if you have lots of RAM/VRAM

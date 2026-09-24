@@ -14,9 +14,18 @@ Fully private — no audio, transcripts, or feedback ever leave your computer.
 
 Unzip the folder and run `LessonFeedbackTool.exe`. No Python needed.
 
-You'll also need [Ollama](https://ollama.com) installed and running.
+You'll also need [Ollama](https://ollama.com). If it's missing, the app tells you and links to the download; if it's installed but closed, the app starts it for you.
 
 [Watch the demo ](https://youtu.be/zr9_7VPAwic)
+
+## Using it
+
+1. **Getting ready.** On start, the app checks the AI helper and loads the speech engine. The first time, it downloads them (about 11 GB in total).
+2. **Home.** Type your student's name and press **Check sound**: say something, then play a video with talking. Both bars should move. Then press **Start lesson**.
+3. **Lesson.** Teach as normal. The bars show that both sides are being heard. Press **End lesson** when you're done.
+4. **Feedback.** After about a minute, the feedback appears. Edit anything you like, then **Save and open in Word** or **Copy for email or WhatsApp**.
+
+Past lessons are listed on the home screen. If the feedback couldn't be written (for example, Ollama was closed), press **Try again** next to that lesson.
 
 ## Run from source
 
@@ -27,28 +36,30 @@ pip install -r requirements.txt
 python -m lesson_lens
 ```
 
-If the AI step fails, nothing is lost: fix the problem, then run
+If the AI step fails, nothing is lost: press **Try again** in the app, or run
 
 ```powershell
 python -m lesson_lens regenerate "<lesson folder>\transcript.txt"
 ```
 
-(With the .exe: `LessonFeedbackTool.exe regenerate "<lesson folder>\transcript.txt"`.)
+That command is also handy for testing prompt changes on a real lesson without teaching a new one.
 
 ## Where things are
 
 | What | Where |
 |---|---|
-| Lessons: `transcript.txt`, `feedback.docx`, `teacher.wav`, `student.wav` | `Documents\Lesson Lens\<date_time>\` |
+| Lessons: `transcript.txt`, `feedback.docx`, `feedback.json`, `teacher.wav`, `student.wav` | `Documents\Lesson Lens\<date time student>\` |
 | Your settings | `%APPDATA%\Lesson Lens\settings.json` |
 | Lesson database (students, lesson history) | `%LOCALAPPDATA%\Lesson Lens\lesson_lens.db` |
 | Log file (for bug reports) | `%LOCALAPPDATA%\Lesson Lens\Logs\lesson-lens.log` |
 
-**Settings.** The defaults and what each one does are in `lesson_lens/settings.py`. To change one, put just that key in `settings.json` and restart, e.g.
+**Settings.** The everyday ones (devices, feedback quality, lesson audio, lessons folder) are in the app's **Settings** window. Everything else, with what each one does, is in `lesson_lens/settings.py`. To change one, put just that key in `settings.json` and restart, e.g.
 
 ```json
-{ "llm_model": "gemma4:e4b", "save_audio": false }
+{ "whisper_model": "medium.en", "silence_seconds": 2.0 }
 ```
+
+**Feedback quality.** The default AI model is `gemma4:e4b`. On a test transcript it caught all three learner errors. `llama3.1` ("Faster" in Settings) took 21 s instead of 54 s, but it caught only one and praised a mistake as correct.
 
 Keys you don't write keep following the defaults, so later updates still reach you. Prompts are in `lesson_lens/prompts.py`.
 
@@ -58,13 +69,14 @@ Keys you don't write keep following the defaults, so later updates still reach y
 
 | Module | Job |
 |---|---|
-| `gui.py` | The window |
+| `ui/` | The window (PySide6): Getting ready → Home → Lesson → Feedback, plus Settings |
 | `pipeline.py` | One lesson: record → transcribe → feedback → Word |
+| `speech.py` | Loads Whisper once at startup, so Start is instant |
 | `capture_mic.py`, `capture_loopback.py` | Teacher and student audio (see below) |
 | `vad.py` | Cuts audio into phrases with Silero VAD |
 | `recording.py` | Saves each side to WAV |
 | `llm.py`, `prompts.py`, `feedback_structure.py` | Ollama, the prompt, and the feedback format |
-| `create_feedback.py` | The Word document |
+| `create_feedback.py` | The Word document, `feedback.json`, and the email text |
 | `db.py` | SQLite database of students and lessons |
 | `settings.py`, `paths.py`, `logs.py` | Settings, file locations, logging |
 
