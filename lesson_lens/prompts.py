@@ -1,6 +1,6 @@
 """Prompts live here so you can improve them without touching any logic.
 
-Tip: after editing, re-run  python regenerate.py <lesson folder>\\transcript.txt
+Tip: after editing, re-run  python -m lesson_lens regenerate "<lesson folder>\\transcript.txt"
 to see the effect on a real lesson without teaching a new one.
 """
 

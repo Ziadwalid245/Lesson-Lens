@@ -7,13 +7,9 @@ from math import gcd
 
 import numpy as np
 import pyaudiowpatch as pyaudio
-import torch
 from scipy.signal import resample_poly
 
-import config
-
-VAD_SAMPLE_RATE = 16000
-FRAME_SAMPLES = 512
+from .vad import FRAME_SAMPLES, SAMPLE_RATE
 
 
 def find_loopback_device():
@@ -29,19 +25,19 @@ def find_loopback_device():
     raise RuntimeError("No loopback device found for your default speakers.")
 
 
-def capture_loopback(vad_model, loopback_device, stop_flag):
-    """Yield (audio, sample_rate, started_at) for every phrase the student says."""
+def loopback_frames(loopback_device, stop_flag):
+    """Yield (frame, arrived_at): 16 kHz mono float32 frames of what the PC plays, until stop_flag is set.
+
+    The device gives raw 48 kHz stereo (usually), so this does by hand what
+    sounddevice's auto_convert does for the mic.
+    """
     device_rate = int(loopback_device["defaultSampleRate"])  # usually 48000
     channels = loopback_device["maxInputChannels"]           # usually 2
 
     # Read enough device frames to end up with exactly 512 samples at 16 kHz.
-    g = gcd(device_rate, VAD_SAMPLE_RATE)
-    up, down = VAD_SAMPLE_RATE // g, device_rate // g        # 1, 3 at 48 kHz
+    g = gcd(device_rate, SAMPLE_RATE)
+    up, down = SAMPLE_RATE // g, device_rate // g            # 1, 3 at 48 kHz
     read_frames = FRAME_SAMPLES * down // up                 # 1536 at 48 kHz
-
-    frame_seconds = FRAME_SAMPLES / VAD_SAMPLE_RATE
-    needed_silence_frames = int(config.SILENCE_SECONDS / frame_seconds)
-    captured, silent_streak, is_talking, started_at = [], 0, False, 0.0
 
     with pyaudio.PyAudio() as p:
         with p.open(
@@ -56,20 +52,4 @@ def capture_loopback(vad_model, loopback_device, stop_flag):
                 raw = stream.read(read_frames, exception_on_overflow=False)
                 data = np.frombuffer(raw, dtype=np.int16).reshape(-1, channels).astype(np.float32)
                 mono = data.mean(axis=1) / 32768.0
-                frame = resample_poly(mono, up, down).astype(np.float32)
-
-                is_speech = vad_model(torch.from_numpy(frame), VAD_SAMPLE_RATE).item() > config.VAD_THRESHOLD
-                if is_speech:
-                    if not is_talking:
-                        started_at = time.monotonic()
-                    captured.append(frame)
-                    silent_streak, is_talking = 0, True
-                elif is_talking:
-                    captured.append(frame)
-                    silent_streak += 1
-                    if silent_streak >= needed_silence_frames:
-                        yield np.concatenate(captured), VAD_SAMPLE_RATE, started_at
-                        captured, silent_streak, is_talking = [], 0, False
-
-    if captured:
-        yield np.concatenate(captured), VAD_SAMPLE_RATE, started_at
+                yield resample_poly(mono, up, down).astype(np.float32), time.monotonic()
