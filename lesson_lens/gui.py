@@ -113,6 +113,21 @@ class App:
         if self.last_lesson_dir:
             os.startfile(self.last_lesson_dir)
 
+    def on_close(self):
+        if self.lesson_thread and self.lesson_thread.is_alive():
+            if not messagebox.askyesno(
+                "Lesson Lens",
+                "A lesson is still being recorded or turned into feedback.\n\n"
+                "Quit anyway? The audio and transcript so far stay in the lesson folder.",
+                icon="warning",
+                default="no",
+            ):
+                return
+            log.warning("Window closed during a lesson")
+            if self.stop_flag:
+                self.stop_flag.set()
+        self.root.destroy()
+
     def set_running(self, running):
         self.start_button.state(["disabled" if running else "!disabled"])
         self.stop_button.state(["!disabled" if running else "disabled"])
@@ -155,5 +170,6 @@ def run():
         messagebox.showerror("Lesson Lens", f"Something went wrong: {exc}\n\nDetails are in the log:\n{paths.LOG_FILE}")
 
     root.report_callback_exception = report_callback_exception
-    App(root)
+    app = App(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_close)
     root.mainloop()
