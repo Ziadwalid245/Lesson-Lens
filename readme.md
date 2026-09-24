@@ -18,6 +18,24 @@ You'll also need [Ollama](https://ollama.com) installed and running.
 
 [Watch the demo ](https://youtu.be/zr9_7VPAwic)
 
+## Run from source
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python gui.py
+```
+
+Every lesson is saved in `Documents\Lesson Lens\<date_time>\` with `transcript.txt` and `feedback.docx`.
+If the AI step fails, nothing is lost: fix the problem, then run
+
+```powershell
+python regenerate.py "<lesson folder>\transcript.txt"
+```
+
+All settings (AI model, Whisper model, pause length...) are in `config.py`. Prompts are in `prompts.py`.
+
 ## Design notes
 
 **Why two audio libraries?**

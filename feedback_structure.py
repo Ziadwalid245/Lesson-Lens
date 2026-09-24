@@ -1,21 +1,30 @@
+"""The shape of the feedback. The AI is forced to answer in exactly this format."""
 from pydantic import BaseModel, Field
+
+
 class VocabItem(BaseModel):
-    word:str = Field( description="Hard word or vocabulary term that was brought up in the lesson.")
-    definition:str = Field( description="The definition of the vocabulary word.")
-    in_context:str = Field( description="The context in which the word was used during the lesson.")    
-class Corrections(BaseModel):
-    original:str = Field( description="The original sentence or phrase that contained an error.")
-    corrected:str = Field( description="The corrected version of the sentence or phrase.")
-    explanation:str = Field( description="An explanation of the correction made, including grammar rules or usage tips.")
+    word: str = Field(description="A useful word or phrase that came up in the lesson.")
+    definition: str = Field(description="A short, simple definition the student will understand.")
+    in_context: str = Field(description="The sentence from the lesson where it was used.")
+
+
+class Correction(BaseModel):
+    original: str = Field(description="What the student actually said, containing the error.")
+    corrected: str = Field(description="The corrected version.")
+    explanation: str = Field(description="One or two simple sentences explaining why.")
+
+
 class GrammarPoint(BaseModel):
-    explained_garmmar:str = Field( description="Name of grammar points covered, no explanation. E.g. 'Present Simple', 'Past Perfect', 'Zero Conditional'. ")
-    Form:str = Field( description="The form of the grammar point, including any relevant rules or structures.")
-    Usage:str = Field( description="How the grammar point is used in context, with examples from the transcript.")
+    name: str = Field(description="Name of the grammar point only, e.g. 'Present Perfect'.")
+    form: str = Field(description="How it is formed, e.g. 'have/has + past participle'.")
+    usage: str = Field(description="When we use it, with an example from the lesson if possible.")
+
+
 class StudentFeedback(BaseModel):
-    lesson_summary:str = Field( description="A brief summary of the lesson content.")
-    grammar_points:list[GrammarPoint] = Field( description="A list of grammar points covered in the lesson.")
-    positive_feedback:str = Field( description="Specific moments during the lesson where the student performed well or showed improvement.")
-    vocab_items:list[VocabItem] = Field( description="A list of vocabulary items introduced in the lesson.")
-    corrections:list[Corrections] = Field( description="A list of corrections made to the student's work.")
-    improvement_areas:str = Field( description="Areas where the student can improve, including specific skills or topics to focus on.")
-student_schema = StudentFeedback.model_json_schema()
+    lesson_summary: str = Field(description="2-3 sentences summarising what the lesson covered.")
+    positive_feedback: list[str] = Field(description="2-3 specific things the student did well.")
+    grammar_points: list[GrammarPoint] = Field(description="Grammar taught or practised. Can be empty.")
+    vocab_items: list[VocabItem] = Field(description="Vocabulary that came up. Can be empty.")
+    corrections: list[Correction] = Field(description="The student's real errors. Can be empty.")
+    improvement_areas: list[str] = Field(description="1-2 'Next time, try...' suggestions.")
+    practice_task: str = Field(description="One small task to do before the next lesson.")

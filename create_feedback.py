@@ -1,53 +1,61 @@
+"""Turns a StudentFeedback object into a tidy Word document."""
+from datetime import date
+
 from docx import Document
+from docx.shared import Pt
 
 
+def _table(doc, headers, rows):
+    table = doc.add_table(rows=1, cols=len(headers))
+    table.style = "Table Grid"
+    for cell, text in zip(table.rows[0].cells, headers):
+        cell.text = text
+        cell.paragraphs[0].runs[0].font.bold = True
+    for row in rows:
+        for cell, text in zip(table.add_row().cells, row):
+            cell.text = text
+    doc.add_paragraph()  # breathing room after the table
 
-def create_feedback_doc(feedback, output_path):
+
+def _bullets(doc, items):
+    for item in items:
+        doc.add_paragraph(item, style="List Bullet")
+
+
+def create_feedback_doc(feedback, output_path, lesson_date=None):
     doc = Document()
-    doc.add_heading('Student Feedback', level=1)
-    doc.add_heading('Lesson Summary', level=2)
+    doc.styles["Normal"].font.size = Pt(11)
+
+    doc.add_heading("Lesson Feedback", level=0)
+    doc.add_paragraph((lesson_date or date.today()).strftime("%A %d %B %Y"))
+
+    doc.add_heading("What we covered", level=1)
     doc.add_paragraph(feedback.lesson_summary)
-    vocab_table = doc.add_table(rows=1, cols=3)
-    grammar_table = doc.add_table(rows=1, cols=3)
-    corrections_table = doc.add_table(rows=1, cols=3)
-    vocab_table.style = 'Table Grid'
-    grammar_table.style = 'Table Grid'
-    corrections_table.style = 'Table Grid'
-   
-    
-    
-    
-    vocab_table_headers = vocab_table.rows[0].cells
-    vocab_table_headers[0].text = 'Word'
-    vocab_table_headers[1].text = 'Definition' 
-    vocab_table_headers[2].text = 'Sentence in passage/Audio'
 
-    for vocab in feedback.vocab_items:
-        row_cells = vocab_table.add_row().cells
-        row_cells[0].text = vocab.word
-        row_cells[1].text = vocab.definition
-        row_cells[2].text = vocab.in_context
-    grammar_table_headers = grammar_table.rows[0].cells
-    grammar_table_headers[0].text = 'Grammar Point'
-    grammar_table_headers[1].text = 'Form'  
-    grammar_table_headers[2].text = 'Usage'
-    for gp in feedback.grammar_points:
-        row_cells = grammar_table.add_row().cells
-        row_cells[0].text = gp.explained_garmmar
-        row_cells[1].text = gp.Form
-        row_cells[2].text = gp.Usage
-    corrections_table_headers = corrections_table.rows[0].cells
-    corrections_table_headers[0].text = 'Sentence with Error'
-    corrections_table_headers[1].text = 'Corrected Sentence'
-    corrections_table_headers[2].text = 'Explanation'
-    for correction in feedback.corrections:
-        row_cells = corrections_table.add_row().cells
-        row_cells[0].text = correction.original
-        row_cells[1].text = correction.corrected
-        row_cells[2].text = correction.explanation
-    doc.add_heading('Positive Feedback', level=2)
-    doc.add_paragraph(feedback.positive_feedback)
-    doc.add_heading('Areas for Improvement', level=2)
-    doc.add_paragraph(feedback.improvement_areas)
-    doc.save(output_path)
+    if feedback.positive_feedback:
+        doc.add_heading("What you did well", level=1)
+        _bullets(doc, feedback.positive_feedback)
 
+    if feedback.grammar_points:
+        doc.add_heading("Grammar", level=1)
+        _table(doc, ["Grammar point", "Form", "Usage"],
+               [(g.name, g.form, g.usage) for g in feedback.grammar_points])
+
+    if feedback.vocab_items:
+        doc.add_heading("Vocabulary", level=1)
+        _table(doc, ["Word", "Meaning", "From the lesson"],
+               [(v.word, v.definition, v.in_context) for v in feedback.vocab_items])
+
+    if feedback.corrections:
+        doc.add_heading("Corrections", level=1)
+        _table(doc, ["What you said", "Better", "Why"],
+               [(c.original, c.corrected, c.explanation) for c in feedback.corrections])
+
+    if feedback.improvement_areas:
+        doc.add_heading("What to work on", level=1)
+        _bullets(doc, feedback.improvement_areas)
+
+    doc.add_heading("Practice before our next lesson", level=1)
+    doc.add_paragraph(feedback.practice_task)
+
+    doc.save(str(output_path))
