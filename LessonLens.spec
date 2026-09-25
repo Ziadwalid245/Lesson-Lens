@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('lesson_lens/ui/icon.png', 'lesson_lens/ui')]  # window icon
 binaries = []
 hiddenimports = ['sounddevice']
 tmp_ret = collect_all('_sounddevice_data')
@@ -38,7 +38,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='LessonFeedbackTool',
+    name='Lesson Lens',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -49,6 +49,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='assets/icon.ico',
 )
 coll = COLLECT(
     exe,
@@ -57,5 +58,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='LessonFeedbackTool',
+    name='Lesson Lens',
 )

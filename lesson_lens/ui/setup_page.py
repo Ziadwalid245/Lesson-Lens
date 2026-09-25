@@ -5,6 +5,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
 
 from .. import settings
+from ..diskspace import NotEnoughSpace
 from ..llm import DOWNLOAD_PAGE, OllamaNotRunning, check_ollama, ensure_model, ollama_app_path, start_ollama
 from ..speech import load_whisper
 from .tasks import run_task
@@ -163,6 +164,9 @@ class SetupPage(QWidget):
             self.ai_row.problem("Didn't start")
             self._show_error("The AI helper (Ollama) is installed but didn't start.\n\n"
                              "Open Ollama from the Start menu, wait a few seconds, then press \"Try again\".")
+        elif isinstance(error, NotEnoughSpace):
+            self.ai_row.problem("Not enough space")
+            self._show_error(str(error))
         else:
             self.ai_row.problem("Something went wrong")
             self._show_error(f"{error}\n\nCheck your internet connection (only needed the first time) "
@@ -177,9 +181,13 @@ class SetupPage(QWidget):
 
     def _speech_failed(self, error):
         self._speech_running = False
-        self.speech_row.problem("Couldn't load")
-        self._show_error(f"The speech engine couldn't load: {error}\n\n"
-                         "Check your internet connection (only needed the first time) and press \"Try again\".")
+        if isinstance(error, NotEnoughSpace):
+            self.speech_row.problem("Not enough space")
+            self._show_error(str(error))
+        else:
+            self.speech_row.problem("Couldn't load")
+            self._show_error(f"The speech engine couldn't load: {error}\n\n"
+                             "Check your internet connection (only needed the first time) and press \"Try again\".")
         self.retry_button.show()
 
     def _show_error(self, text):

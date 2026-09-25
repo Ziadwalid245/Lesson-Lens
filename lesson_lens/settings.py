@@ -42,7 +42,12 @@ class Settings:
     vad_threshold: float = 0.5      # 0-1: how sure the VAD must be that a frame is speech
     silence_seconds: float = 2.5    # pause length that ends a speech segment
 
+    # --- App -----------------------------------------------------------------------
+    # Asks GitHub once per start whether a newer version exists. Sends no lesson data.
+    check_for_updates: bool = True
+
     # --- Remembered by the app (you don't need to set these) ---------------------
+    consent_reminder_shown: bool = False
     last_microphone: str = ""
     last_speakers: str = ""
     last_student: str = ""

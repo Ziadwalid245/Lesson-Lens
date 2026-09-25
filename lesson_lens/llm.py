@@ -12,6 +12,7 @@ import requests
 from pydantic import ValidationError
 
 from . import settings
+from .diskspace import require_free
 from .feedback_structure import StudentFeedback
 from .prompts import FEEDBACK_SYSTEM_PROMPT
 
@@ -27,6 +28,13 @@ class OllamaNotRunning(OllamaError):
 
 
 DOWNLOAD_PAGE = "https://ollama.com/download"
+
+# Download sizes, for the free-space check. Other models are assumed to be about 10 GB.
+MODEL_SIZES_GB = {"gemma4:e4b": 9.6, "llama3.1": 4.9}
+
+
+def ollama_models_dir():
+    return Path(os.environ.get("OLLAMA_MODELS") or Path.home() / ".ollama" / "models")
 
 
 def _url(path):
@@ -100,6 +108,7 @@ def ensure_model(on_progress=print, on_percent=None):
     if _full_name(model) in installed_models():
         return
 
+    require_free(ollama_models_dir(), MODEL_SIZES_GB.get(model, 10) + 1, "the AI model")
     log.info("Model %s is missing, pulling it", model)
     on_progress(f"Downloading AI model '{model}' (one-time, can take a while)...")
     last_pct = -1

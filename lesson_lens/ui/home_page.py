@@ -3,6 +3,7 @@ import os
 import queue
 import threading
 import time
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .. import db, settings
+from .. import DOWNLOAD_URL, db, settings
 from ..capture_loopback import loopback_frames
 from ..capture_mic import mic_frames
 from ..devices import friendly_name
@@ -54,6 +55,7 @@ class HomePage(QWidget):
     start_requested = Signal(str)   # student name
     open_lesson = Signal(str)       # lesson folder
     settings_requested = Signal()
+    help_requested = Signal()
 
     def __init__(self, current_devices):
         """current_devices() -> (mic name, mic index, speakers name, speakers info)."""
@@ -73,10 +75,25 @@ class HomePage(QWidget):
         header = QHBoxLayout()
         header.addWidget(label("Lesson Lens", "title"))
         header.addStretch(1)
+        help_button = QPushButton("?  Help")
+        help_button.clicked.connect(self.help_requested)
+        header.addWidget(help_button)
         settings_button = QPushButton("⚙  Settings")
         settings_button.clicked.connect(self.settings_requested)
         header.addWidget(settings_button)
         layout.addLayout(header)
+
+        # Hidden until the update check finds a newer version.
+        self.update_bar = QWidget()
+        update_row = QHBoxLayout(self.update_bar)
+        update_row.setContentsMargins(0, 0, 0, 0)
+        self.update_text = label("", "banner")
+        update_row.addWidget(self.update_text, 1)
+        get_update = QPushButton("Download")
+        get_update.clicked.connect(lambda: webbrowser.open(DOWNLOAD_URL))
+        update_row.addWidget(get_update)
+        self.update_bar.hide()
+        layout.addWidget(self.update_bar)
 
         # --- Start a lesson ---------------------------------------------------------
         start_card, start = card()
@@ -181,8 +198,22 @@ class HomePage(QWidget):
             if answer != QMessageBox.Yes:
                 self.student.setFocus()
                 return
+        if not settings.get().consent_reminder_shown:
+            QMessageBox.information(
+                self, "Before your first lesson",
+                "Please let your students know that you record your lessons to write their feedback.\n\n"
+                "For example: \"I use an app that helps me write your feedback, so it records our lesson. "
+                "The recording stays on my computer.\"\n\n"
+                "With children, ask a parent first.",
+            )
+            settings.update(consent_reminder_shown=True)
         self.stop_sound_check()
         self.start_requested.emit(name)
+
+    def show_update(self, version):
+        if version:
+            self.update_text.setText(f"A new version of Lesson Lens ({version}) is available.")
+            self.update_bar.show()
 
     # --- Past lessons ---------------------------------------------------------------------
     def _row_action(self, row):

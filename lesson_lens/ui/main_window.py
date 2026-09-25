@@ -5,11 +5,14 @@ from PySide6.QtWidgets import QMainWindow, QMessageBox, QStackedWidget
 
 from .. import settings
 from ..devices import choose, get_default_input_name, get_default_output_name, get_input_devices, get_output_devices
+from ..updates import newer_version
 from .feedback_page import FeedbackPage
+from .help_dialog import HelpDialog
 from .home_page import HomePage
 from .lesson_page import LessonPage
 from .settings_dialog import SettingsDialog
 from .setup_page import SetupPage
+from .tasks import run_task
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +21,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Lesson Lens")
-        self.resize(860, 760)
+        screen = self.screen().availableGeometry()  # small laptops: never taller than the screen
+        self.resize(min(860, screen.width() - 40), min(760, screen.height() - 60))
         self.whisper = None
         self.input_devices = get_input_devices()
         self.output_devices = get_output_devices()
@@ -36,6 +40,7 @@ class MainWindow(QMainWindow):
         self.home.start_requested.connect(self._start_lesson)
         self.home.open_lesson.connect(self._open_feedback)
         self.home.settings_requested.connect(self._open_settings)
+        self.home.help_requested.connect(lambda: HelpDialog(self).exec())
         self.lesson.feedback_ready.connect(self._open_feedback)
         self.lesson.back_home.connect(self._go_home)
         self.feedback.back_home.connect(self._go_home)
@@ -55,8 +60,11 @@ class MainWindow(QMainWindow):
         return mic, self.input_devices[mic], speakers, self.output_devices[speakers]
 
     def _ready(self, whisper):
+        first_time = self.whisper is None
         self.whisper = whisper
         self._go_home()
+        if first_time and settings.get().check_for_updates:
+            run_task(lambda report: newer_version(), name="update-check", on_done=self.home.show_update)
 
     def _go_home(self):
         self.home.refresh()

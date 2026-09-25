@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson Lens</title>
+<meta name="description" content="Free app for online English teachers: records your lesson and writes your student's feedback. Mistakes with corrections, new vocabulary and homework. Nothing leaves your computer.">
+<meta property="og:title" content="Lesson Lens: lesson feedback, written for you">
+<meta property="og:description" content="Records your online lesson and writes your student's feedback. Free, and nothing leaves your computer.">
+<meta property="og:image" content="img/feedback.png">
+<link rel="icon" href="img/icon.png">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1f2328; --muted: #5b6470; --border: #e3e6ea;
+    --green: #1f7a4d; --green-hover: #196640; --green-soft: #e7f5ec; --warn-soft: #fff4ce; --warn-border: #f0d27a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181c; --card: #1e2227; --text: #e8eaed; --muted: #a2a9b1; --border: #30353c;
+      --green: #2e9e62; --green-hover: #37b471; --green-soft: #1d3327; --warn-soft: #3a3320; --warn-border: #6b5a24;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  a { color: var(--green); }
+  h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
+  h2 { font-size: 1.7rem; margin-top: 8px; }
+  section { padding: 44px 0; }
+  .muted { color: var(--muted); }
+
+  header.hero { padding: 56px 0 28px; text-align: center; }
+  .brand { display: inline-flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1.25rem; }
+  .brand img { width: 44px; height: 44px; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3rem); margin: 22px 0 14px; }
+  .hero p.lead { font-size: 1.2rem; max-width: 680px; margin: 0 auto 26px; color: var(--muted); }
+  .button { display: inline-block; background: var(--green); color: #fff; text-decoration: none;
+            font-weight: 600; font-size: 1.15rem; padding: 14px 30px; border-radius: 10px; }
+  .button:hover { background: var(--green-hover); }
+  .button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); font-weight: 500; }
+  .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .small { font-size: .92rem; }
+  .shot { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border);
+          box-shadow: 0 10px 30px rgba(0,0,0,.08); background: var(--card); display: block; }
+  .hero .shot { margin-top: 36px; }
+
+  .ticks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 22px; }
+  .tick { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .tick strong { display: block; margin-bottom: 4px; }
+
+  .steps { counter-reset: step; display: grid; gap: 34px; margin-top: 26px; }
+  .step { display: grid; grid-template-columns: 1fr 1.25fr; gap: 26px; align-items: center; }
+  .step h3::before { counter-increment: step; content: counter(step);
+                     display: inline-grid; place-items: center; width: 32px; height: 32px; margin-right: 10px;
+                     border-radius: 50%; background: var(--green); color: #fff; font-size: 1rem; }
+  @media (max-width: 720px) { .step { grid-template-columns: 1fr; } }
+
+  ol.install { padding-left: 1.3em; }
+  ol.install li { margin-bottom: 14px; }
+  .note { background: var(--warn-soft); border: 1px solid var(--warn-border); border-radius: 10px; padding: 12px 16px; margin: 10px 0; }
+  .good { background: var(--green-soft); border-radius: 10px; padding: 12px 16px; }
+  kbd { font: inherit; font-weight: 600; background: var(--card); border: 1px solid var(--border);
+        border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; }
+
+  details { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 10px 0 0; }
+
+  footer { border-top: 1px solid var(--border); padding: 26px 0 40px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand"><img src="img/icon.png" alt=""> Lesson Lens</div>
+    <h1>Your students' feedback,<br>written for you.</h1>
+    <p class="lead">Lesson Lens records your online English lesson and writes clear feedback: what you covered,
+      your student's mistakes with corrections, new vocabulary and homework. Edit it, then send it.</p>
+    <div class="buttons">
+      <a class="button" href="https://github.com/Ziadwalid245/Lesson-Lens/releases/latest/download/LessonLens.zip">Download for Windows</a>
+      <a class="button secondary" href="#install">How to install</a>
+    </div>
+    <p class="small muted">Free · Windows 10 and 11 · Nothing leaves your computer</p>
+    <!-- When the demo video is ready, replace VIDEO_ID and uncomment:
+    <div style="position:relative;padding-top:56.25%;margin-top:36px">
+      <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID" title="Lesson Lens demo" allowfullscreen
+              style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:12px"></iframe>
+    </div> -->
+    <img class="shot" src="img/feedback.png" alt="Lesson Lens showing a student's corrections: I go to Aswan becomes I went to Aswan, with a short explanation.">
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Why teachers use it</h2>
+    <div class="ticks">
+      <div class="tick"><strong>Get your evenings back</strong><span class="muted">No more 15 minutes of writing after every lesson.</span></div>
+      <div class="tick"><strong>Catch every mistake</strong><span class="muted">It lists what your student said, the better way to say it, and why.</span></div>
+      <div class="tick"><strong>Private by design</strong><span class="muted">Recording, transcript and feedback all stay on your computer.</span></div>
+      <div class="tick"><strong>Works with any platform</strong><span class="muted">Zoom, Google Meet, Skype, Teams, or a teaching site in your browser.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div><h3>Check your sound</h3>
+          <p>Type your student's name and press <kbd>Check sound</kbd>. Say something, then play a video with someone talking.
+            When both bars move, you're ready. Press <kbd>Start lesson</kbd>.</p></div>
+        <img class="shot" src="img/home.png" alt="The home screen with the student's name, two sound bars and a Start lesson button.">
+      </div>
+      <div class="step">
+        <div><h3>Teach as normal</h3>
+          <p>The bars show that you and your student are both being heard. When the lesson is over, press <kbd>End lesson</kbd>.</p></div>
+        <img class="shot" src="img/lesson.png" alt="A lesson in progress with a timer, sound bars and the words being heard.">
+      </div>
+      <div class="step">
+        <div><h3>Check it and send it</h3>
+          <p>About a minute later the feedback appears. Change anything you like, then press
+            <kbd>Save and open in Word</kbd> or <kbd>Copy for email or WhatsApp</kbd>.</p></div>
+        <img class="shot" src="img/feedback.png" alt="The feedback screen with a corrections table you can edit.">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install it (about 10 minutes, plus one big download)</h2>
+    <ol class="install">
+      <li><strong>Install Ollama</strong>, the free app that runs the AI on your computer:
+        <a href="https://ollama.com/download">ollama.com/download</a>. Install it like any other program.</li>
+      <li><strong>Download Lesson Lens</strong> with the green button at the top. Find <em>LessonLens.zip</em> in your Downloads,
+        right-click it and choose <kbd>Extract All</kbd>.</li>
+      <li><strong>Open the "Lesson Lens" folder</strong> and double-click <strong>Lesson Lens.exe</strong>.
+        <div class="note">Windows may show a blue box saying <strong>"Windows protected your PC"</strong>. That's because
+          Lesson Lens is new and not yet signed by Microsoft. Click <kbd>More info</kbd>, then <kbd>Run anyway</kbd>.
+          You only need to do this once.</div></li>
+      <li><strong>Let it get ready.</strong> The first time, it downloads the speech engine and the AI model, about 11 GB in total.
+        This can take an hour on a slow connection, so do it before a lesson, not right before.
+        After that it starts in a few seconds.
+        <img class="shot" style="margin-top:12px" src="img/getting-ready.png" alt="The Getting ready screen downloading the AI model, 42% done."></li>
+    </ol>
+    <p class="good"><strong>Tip:</strong> Tell your students you record lessons to write their feedback. For example:
+      "I use an app that helps me write your feedback, so it records our lesson. The recording stays on my computer."
+      With children, ask a parent first.</p>
+  </div>
+</section>
+
+<section id="needs">
+  <div class="wrap">
+    <h2>What you need</h2>
+    <ul>
+      <li>Windows 10 or 11</li>
+      <li>About 15 GB of free space</li>
+      <li>A reasonably modern computer. It works best with 16 GB of memory. On an older or slower computer,
+        choose <em>Faster</em> under <kbd>Settings</kbd> → <em>Feedback quality</em>.</li>
+      <li>Headphones or speakers you hear your student on, and a microphone</li>
+    </ul>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <details><summary>Is it really free?</summary>
+      <p>Yes.</p></details>
+    <details><summary>Does it upload my lessons anywhere?</summary>
+      <p>No. The recording, the transcript and the feedback are made and stored on your computer, in
+        <em>Documents\Lesson Lens</em>. The only time it goes online is to download the AI the first time, and to check
+        whether a newer version of Lesson Lens is out. Neither sends anything about your lessons.</p></details>
+    <details><summary>Do I need to tell my students?</summary>
+      <p>Yes, please. Let them know you record lessons to write their feedback, and ask a parent first with children.</p></details>
+    <details><summary>Why does Windows say "Windows protected your PC"?</summary>
+      <p>Windows shows this for new apps that aren't signed with a paid Microsoft certificate yet. Click <kbd>More info</kbd>,
+        then <kbd>Run anyway</kbd>.</p></details>
+    <details><summary>Why is the first start so slow?</summary>
+      <p>It's downloading the speech engine and the AI model (about 11 GB) so that everything can run on your own computer.
+        This only happens once.</p></details>
+    <details><summary>It didn't hear my student. What do I do?</summary>
+      <p>Press <kbd>Check sound</kbd> before the lesson and play a video with someone talking. If the "Your student" bar
+        doesn't move, go to <kbd>Settings</kbd> and choose the headphones or speakers you actually hear your student on.</p></details>
+    <details><summary>The feedback wasn't written. Did I lose the lesson?</summary>
+      <p>No. The lesson is saved. On the home screen, press <kbd>Try again</kbd> next to it. This usually happens when Ollama was closed.</p></details>
+    <details><summary>Does it work on a Mac?</summary>
+      <p>Not yet. It's Windows only for now.</p></details>
+    <details><summary>How do I get updates?</summary>
+      <p>When a new version is out, Lesson Lens shows a yellow bar on the home screen with a <kbd>Download</kbd> button.</p></details>
+    <details><summary>Something isn't working</summary>
+      <p>In Lesson Lens, press <kbd>Help</kbd> → <kbd>Copy problem report</kbd>, then send it to us with a sentence about
+        what happened: <a href="https://github.com/Ziadwalid245/Lesson-Lens/issues">report a problem</a>.
+        The report doesn't include anything said in your lessons or your students' names.</p></details>
+  </div>
+</section>
+
+<footer class="small muted">
+  <div class="wrap">Lesson Lens · <a href="https://github.com/Ziadwalid245/Lesson-Lens">Source code on GitHub</a></div>
+</footer>
+
+</body>
+</html>

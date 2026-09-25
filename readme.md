@@ -12,7 +12,7 @@ Fully private — no audio, transcripts, or feedback ever leave your computer.
 
 [Download the latest release](https://github.com/Ziadwalid245/lesson-lens/releases/latest)
 
-Unzip the folder and run `LessonFeedbackTool.exe`. No Python needed.
+Unzip the folder and run `Lesson Lens.exe`. No Python needed. Windows may say "Windows protected your PC" because the app isn't code-signed yet: click **More info**, then **Run anyway**.
 
 You'll also need [Ollama](https://ollama.com). If it's missing, the app tells you and links to the download; if it's installed but closed, the app starts it for you.
 

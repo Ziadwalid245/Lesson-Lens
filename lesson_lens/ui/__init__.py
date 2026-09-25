@@ -1,8 +1,11 @@
 """The Lesson Lens window (PySide6)."""
+import ctypes
 import logging
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from .. import paths
@@ -13,8 +16,11 @@ log = logging.getLogger(__name__)
 
 
 def run():
+    # Its own taskbar icon and grouping, instead of Python's (matters when run from source).
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("LessonLens.App")
     app = QApplication(sys.argv)
     app.setApplicationName("Lesson Lens")
+    app.setWindowIcon(QIcon(str(Path(__file__).with_name("icon.png"))))
     app.styleHints().setColorScheme(Qt.ColorScheme.Light)  # the design is light-only for now
     app.setStyle("Fusion")
     app.setStyleSheet(STYLESHEET)
