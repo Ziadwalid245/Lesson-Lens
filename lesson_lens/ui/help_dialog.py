@@ -6,7 +6,7 @@ import webbrowser
 
 from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QPushButton, QVBoxLayout
 
-from .. import HOMEPAGE, SUPPORT_URL, __version__, db, paths, settings
+from .. import HOMEPAGE, SUPPORT_EMAIL, SUPPORT_URL, __version__, db, paths, settings
 from .widgets import label
 
 
@@ -50,18 +50,21 @@ class HelpDialog(QDialog):
         layout.addWidget(label("Something not working?", "h2"))
         layout.addWidget(label(
             "1. Press \"Copy problem report\".\n"
-            "2. Press \"Contact\" and paste the report into your message, with a sentence about what happened.\n\n"
+            f"2. Email it to {SUPPORT_EMAIL}: paste the report into the email, "
+            "with a sentence about what happened.\n\n"
             "The report has technical details only: nothing that was said in your lessons, and no student names.",
             "hint"))
         buttons = QHBoxLayout()
         copy = QPushButton("Copy problem report")
         copy.setObjectName("primary")
         copy.clicked.connect(self._copy)
-        contact = QPushButton("Contact")
-        contact.clicked.connect(lambda: webbrowser.open(SUPPORT_URL))
+        email = QPushButton("Email us")
+        email.clicked.connect(lambda: webbrowser.open(SUPPORT_URL))
+        copy_address = QPushButton("Copy email address")
+        copy_address.clicked.connect(self._copy_address)
         logs = QPushButton("Open log folder")
         logs.clicked.connect(lambda: os.startfile(paths.LOG_DIR))
-        for button in (copy, contact, logs):
+        for button in (copy, email, copy_address, logs):
             buttons.addWidget(button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
@@ -78,4 +81,8 @@ class HelpDialog(QDialog):
 
     def _copy(self):
         QApplication.clipboard().setText(problem_report())
-        self.copied.setText("✅  Copied. Now press \"Contact\" and paste it into your message.")
+        self.copied.setText(f"✅  Copied. Now paste it into an email to {SUPPORT_EMAIL}.")
+
+    def _copy_address(self):
+        QApplication.clipboard().setText(SUPPORT_EMAIL)
+        self.copied.setText(f"✅  Copied {SUPPORT_EMAIL}. Paste it into the \"To\" box of a new email.")
